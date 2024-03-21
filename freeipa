@@ -1,0 +1,176 @@
+# documentation for FreeIPA/Red Hat Identity Management NECCDC 2024
+
+## packet filtering
+- iptables -A INPUT -p tcp --dport ssh -s 10.10.10.10 -j REJECT
+> reject incoming SSH traffic from the specified source IP address (10.10.10.10).
+
+## changing password of admin/root
+- ipa passwd <username>
+
+## IMPORTANT PORTS AND WHAT THEY ARE
+
+### TCP/UDP 389 (LDAP):
+Default LDAP port.
+Recommendation: Consider allowing traffic only from trusted sources, use encryption (LDAPS) for enhanced security.
+
+### TCP/UDP 636 (LDAPS):
+Default LDAPS (LDAP over TLS) port.
+Recommendation: Allow traffic only from trusted sources. LDAPS provides encrypted communication.
+
+### TCP 88 (Kerberos):
+Default Kerberos port.
+Recommendation: Limit access to trusted hosts, use firewalls to control access.
+
+### UDP 88 (Kerberos):
+Default Kerberos port (UDP).
+Recommendation: Limit access to trusted hosts, use firewalls to control access.
+
+### TCP/UDP 464 (kpasswd):
+Kerberos password change protocol.
+Recommendation: Control access to trusted hosts, use firewalls.
+
+### TCP/UDP 389 and 636 (DNS):
+FreeIPA uses DNS for service discovery.
+Recommendation: Ensure that DNS traffic is allowed, and consider securing DNS communications.
+
+### TCP 80 and 443 (HTTP/HTTPS):
+Used for the FreeIPA Web UI (HTTP and HTTPS).
+Recommendation: Allow traffic only on the required ports, preferably HTTPS (443).
+
+### TCP 7389 (Secure XML-RPC):
+Used for remote management through ipa command-line tools.
+Recommendation: Limit access to trusted hosts.
+
+### TCP/UDP 53 (DNS):
+DNS traffic for resolving domain names.
+Recommendation: Allow DNS traffic, and consider securing DNS communications.
+
+### TCP/UDP 123 (NTP):
+Network Time Protocol for time synchronization.
+Recommendation: Allow NTP traffic from trusted sources.
+
+### TCP 8080 and 8443 (Dogtag):
+Used by the Dogtag Certificate System.
+Recommendation: Limit access to these ports and ensure secure communication.
+
+## checking audit logs
+
+for login attempts: sudo less /var/log/audit/audit.log
+
+checking for failed login attempts: ipa faillock-find
+
+## review system logs
+sudo less /var/log/secure
+- System logs are typically located in /var/log/secure or /var/log/auth.log. Can use commands like cat or less to view the contents of these logs.
+
+sudo watch -n 3 bash -c "sudo netstat -anp | grep -e 749 -e 464"
+
+sudo watch -n 3 bash -c "sudo netstat -anp | grep -e 749 -e 464"
+periodically check and display information about network connections associated with the specified port numbers (749 and 464) using netstat. The watch command ensures that the information is updated every 3 seconds.
+
+## How to use firewalld
+### Install firewalld if not already installed
+sudo dnf install firewalld
+
+#### Start and enable firewalld
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+
+### Add firewall rules for FreeIPA services
+sudo firewall-cmd --permanent --add-service=freeipa
+sudo firewall-cmd --permanent --add-service=freeipa-ldap
+sudo firewall-cmd --permanent --add-service=freeipa-ldaps
+sudo firewall-cmd --permanent --add-service=freeipa-replication
+sudo firewall-cmd --permanent --add-service=freeipa-trust
+sudo firewall-cmd --permanent --add-service=ntp
+sudo firewall-cmd --reload
+
+
+## iptables
+### Install iptables-services if not already installed
+sudo dnf install iptables-services
+
+### Start and enable iptables
+sudo systemctl start iptables
+sudo systemctl enable iptables
+
+### Add firewall rules for FreeIPA services
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 389 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 636 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 464 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 7389 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 9443 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 53 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 88 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 88 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 464 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 7389 -j ACCEPT
+
+### Save the rules
+sudo service iptables save
+
+### Restart iptables
+sudo systemctl restart iptables
+
+
+## User and group management through server
+ipa user-add username --first=FirstName --last=LastName --password
+
+ipa user-del username
+
+ipa group-add groupname
+
+ipa group-add-member groupname --users=username
+
+ipa group-remove-member groupname --users=username
+
+## Host and Server management
+ipa host-add hostname
+
+ipa host-del hostname
+
+ipa service-add servicename
+
+ipa service-del servicename
+
+
+## Certificate Management:
+Request a Certificate:
+ipa-getcert request -r -f /etc/pki/nssdb/alias -k /etc/pki/nssdb/alias
+
+Check Certificate Request Status:
+ipa-getcert list
+
+## Kerberos and Authentication:
+Get Ticket for User:
+kinit username
+
+Check Kerberos Ticket: 
+klist
+
+## DNS Management:
+Add DNS Record:
+ipa dnsrecord-add domainname hostname --ip-address=IP
+
+Delete DNS Record:
+ipa dnsrecord-del domainname hostname
+
+## Policy and Configuration:
+Set Password Policy:
+ipa pwpolicy-mod --maxlife=90
+
+## Replication and Topology:
+Check Replication Status:
+ipa-replica-manage list
+
+## Misc
+Show FreeIPA Server Information:
+ipa server-show
+
+Check IPA Server Status:
+ipactl status
+
+Update FreeIPA Configuration:
+ipa-advise config-update
